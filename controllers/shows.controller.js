@@ -5,12 +5,24 @@ class ShowsController {
     getAll = async(req, res) => {
         try {
             const conn = await db;
-            const [rows, fields] = await conn.execute('select *, poster_src as "posterSrc" from shows')
+            const [rows, fields] = await conn.execute('select * from shows')
 
             return res.status(200).json({
                 data: rows,
                 message: 'Success: Get shows.'
             })
+        } catch (error) {
+            return handleError(res, 'Error get shows.')
+        }
+    }
+
+    getById = async(req, res) => {
+        try {
+            const conn = await db;
+            const { id } = req.params
+            const [rows, fields] = await conn.execute(`select * from shows where id = ${id}`)
+
+            return res.status(200).json(rows[0])
         } catch (error) {
             return handleError(res, 'Error get shows.')
         }

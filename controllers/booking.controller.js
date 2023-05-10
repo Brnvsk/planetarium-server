@@ -4,7 +4,7 @@ const { handleError } = require('../helpers/common.helper')
 class BookingController {
 
     save = async(req, res) => {
-        const { date, time, showId, places } = req.body
+        const { date, time, showId, places, address } = req.body
         let { userId, email } = req.body
         if (!showId) {
             return handleError(res, 'No show id was provided.')
@@ -17,11 +17,11 @@ class BookingController {
         userId = userId ? userId : null
         email = email ? email : null
 
-        const value = [showId, date, time, email, userId, places]
+        const value = [showId, date, time, address, email, userId, JSON.stringify(places)]
 
         try {
             const conn = await db;
-            const [saved] = await conn.query('INSERT INTO bookings (show_id, date, time, email, user_id, places) values (?)', [value], true)
+            const [saved] = await conn.query('INSERT INTO bookings (show_id, date, time, address, email, user_id, places) values (?)', [value], true)
 
             return res.status(200).json({
                 message: 'Booking saved',
@@ -38,8 +38,13 @@ class BookingController {
 
         try {
             const conn = await db
-            const [bookings] = await conn.query('select * from bookings where show_id = ?', [showId])
-
+            let [bookings] = await conn.query('select * from bookings where show_id = ?', [showId])
+            bookings = bookings.map(booking => {
+                return {
+                    ...booking,
+                    places: JSON.parse(booking.places)
+                }
+            })
             return res.status(200).json({
                 message: 'Get bookings',
                 data: bookings,

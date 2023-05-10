@@ -9,7 +9,7 @@ class UserController {
             const [rows] = await (await db).query('select * from users where email = ?', [token])
 
             if (rows.length === 0) {
-                return res.status(404).json({
+                return res.status(204).json({
                     user: null,
                     message: 'No user found by token provided.'
                 })
