@@ -72,6 +72,56 @@ class ShowsController {
             return handleError(res, 'Error create show.', error)
         }
     }
+
+    update = async (req, res) => {
+        const { id } = req.params
+        const { update } = req.body
+
+        update.poster_src = update.posterPath
+
+        try {
+            const [show] = await db.query('SELECT * from shows where id = ?', id)
+
+            const { title, descr, price, tags, poster_src  } = {
+                ...show[0],
+                ...update,
+            }
+
+            await db.query(`UPDATE shows SET
+                title = ?,
+                descr = ?,
+                price = ?,
+                tags = ?,
+                poster_src = ?
+                where id = ${id}
+                `, [title, descr, price, tags, poster_src])
+
+            const [updated] = await db.query('SELECT * from shows where id = ?', id)
+
+            return res.status(200).json({
+                message: 'Updated show',
+                updated: updated[0],
+            })
+
+        } catch (error) {
+            return handleError(res, 'Error update show.', error)
+        }
+    }
+
+    delete = async (req, res) => {
+        const { id } = req.params
+
+        try {
+            const [deleted] = await db.query('DELETE from shows where id = ?', id)
+
+            return res.status(200).json({
+                message: 'Deleted show',
+                deleted,
+            })
+        } catch (error) {
+            return handleError(res, 'Error delete show.', error)
+        }
+    }
 }
 
 const controller = new ShowsController()
