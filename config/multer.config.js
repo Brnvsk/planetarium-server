@@ -11,8 +11,6 @@ const storage = multer.diskStorage({
 
 	// Choose a filename for each uploaded image
 	filename: function (req, file, cb) {
-		console.log(file);
-
 		const fixedOriginalName = Buffer.from(file.originalname, 'latin1').toString('utf8')
 		
 		cb(null, fixedOriginalName);

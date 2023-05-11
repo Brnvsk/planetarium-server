@@ -1,5 +1,5 @@
-function handleError(res, message, error) {
-    return res.status(500).json({
+function handleError(res, message, error, statusCode = 500) {
+    return res.status(statusCode).json({
         message,
         error
     })

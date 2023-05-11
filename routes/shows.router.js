@@ -7,4 +7,6 @@ router.get('/', showsController.getAll)
 router.get('/:id', showsController.getById)
 router.get('/timeslots/:showId', showsController.getTimeslots)
 
+router.post('/', showsController.create)
+
 module.exports = router

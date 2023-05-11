@@ -43,6 +43,35 @@ class ShowsController {
             return handleError(res, 'Error get timeslost for show.')
         }
     }
+
+    create = async (req, res) => {
+        const { title, descr, price, posterPath } = req.body
+
+        try {
+            const values = [title, descr, price, posterPath, 'tags...']
+            const inserted = await db.query(
+                `INSERT into shows (title, descr, price, poster_src, tags) values (?)`, 
+                [values]
+            )
+            
+            let created = null
+            const insertId = inserted[0].insertId
+            if (insertId) {
+                created = (await db.query('SELECT * from shows where id = ?', insertId))[0]
+            }
+
+            if (!created) {
+                return handleError(res, 'Cannot get newly inserted item')
+            }
+
+            return res.status(200).json({
+                message: 'Created new show',
+                created: created[0],
+            })
+        } catch (error) {
+            return handleError(res, 'Error create show.', error)
+        }
+    }
 }
 
 const controller = new ShowsController()
