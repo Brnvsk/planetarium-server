@@ -18,9 +18,8 @@ class ShowsController {
 
     getById = async(req, res) => {
         try {
-            const conn = await db;
             const { id } = req.params
-            const [rows, fields] = await conn.execute(`select * from shows where id = ${id}`)
+            const [rows, fields] = await db.execute(`select * from shows where id = ${id}`)
 
             return res.status(200).json(rows[0])
         } catch (error) {

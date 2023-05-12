@@ -3,8 +3,7 @@ const db = require('../config/my-sql.config')
 class NewsController {
     getTags = async(req, res) => {
         try {
-            const conn = await db;
-            const [rows, fields] = await conn.execute('select * from news_tags', )
+            const [rows, fields] = await db.execute('select * from news_tags', )
 
             return res.status(200).json({
                 data: rows,

@@ -6,7 +6,7 @@ class UserController {
         const { token } = req.body;
 
         try {
-            const [rows] = await (await db).query('select * from users where email = ?', [token])
+            const [rows] = await db.query('select * from users where email = ?', [token])
 
             if (rows.length === 0) {
                 return res.status(204).json({
