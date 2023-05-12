@@ -67,7 +67,7 @@ class SessionsController {
                 created: data,
             })
         } catch (error) {
-            return handleError(res, 'Error create show.', error)
+            return handleError(res, 'Error create session.', error)
         }
     }
 
@@ -80,28 +80,47 @@ class SessionsController {
         try {
             const [session] = await db.query('SELECT * from shows_slots where id = ?', id)
 
-            const { show_id, date, time, address } = {
+            const { date, time, address } = {
                 ...session[0],
                 ...update,
             }
 
-            await db.query(`UPDATE shows SET
-                show_id = ?,
+            const [existed] = await db.query(
+                `SELECT * from shows_slots where date = ? AND time = ? AND address = ? AND id != ?`,
+                [date, time, address, id]
+            )
+
+            if (existed[0] && existed[0].id) {
+                return res.status(404).json({
+                    message: 'Session already exists. You cannot make such update'
+                })
+            }
+
+            await db.query(`UPDATE shows_slots SET
                 date = ?,
                 time = ?,
-                address = ?,
-                where id = ${id}
-                `, [show_id, date, time, address])
+                address = ?
+                where id = ?
+                `, 
+                [date, time, address, id]
+            )
 
             const [updated] = await db.query('SELECT * from shows_slots where id = ?', id)
 
+            updated[0].showId = updated[0].show_id
+
+            const data = {
+                ...updated[0],
+                showId: updated[0].show_id
+            }
+
             return res.status(200).json({
                 message: 'Updated session',
-                updated: updated[0],
+                updated: data,
             })
 
         } catch (error) {
-            return handleError(res, 'Error update show.', error)
+            return handleError(res, 'Error update session.', error)
         }
     }
 
@@ -116,7 +135,7 @@ class SessionsController {
                 deleted,
             })
         } catch (error) {
-            return handleError(res, 'Error delete show.', error)
+            return handleError(res, 'Error delete session.', error)
         }
     }
 }

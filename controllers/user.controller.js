@@ -40,7 +40,6 @@ class UserController {
                     message: 'No user found with such email.'
                 })
             }
-            console.log(rows[0]);
 
             return res.status(200).json({
                 user: formatUserObject(rows[0]),
@@ -79,7 +78,7 @@ class UserController {
 }
 
 function formatUserObject(user) {
-    const { email, login, id, } = user
+    const { email, login, id, role } = user
     try {
         return {
             id,
@@ -87,6 +86,7 @@ function formatUserObject(user) {
             login,
             avatarId: user.avatar_id,
             interests: user.news_tags,
+            role,
         }
     } catch (error) {
         console.log('Error formatting user');

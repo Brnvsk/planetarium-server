@@ -19,9 +19,9 @@ const sendEmail = (options) => {
 		from: adminEmail
 	}, (err, info) => {
 		if (err) {
-			console.error(err);
+			console.error('Send email error:', err);
 		} else {
-			console.log('Email sent', info.response);
+			// console.log('Email sent', info.response);
 		}
 	})
 }

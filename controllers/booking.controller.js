@@ -71,7 +71,7 @@ class BookingController {
             }
     
             const [ show ] = await conn.query('SELECT * from shows where id = ?', showId)
-            // console.log('send mail here', emailAddr);
+            console.log('send email to:', emailAddr);
             const placesStr = places.map(place => {
                 return `${place.side === 'left' ? 'Слева' : 'Справа'}, ряд ${place.row}, место ${place.place}`
             }).join('; ')
@@ -79,10 +79,9 @@ class BookingController {
             sendEmail({
                 to: emailAddr,
                 subject: `Ваши билеты на показ "${show[0].title}" успешно забронированы`,
-                text: `
-                    Вы забронировали билеты на сеанс ${show[0].title}.
-                    Список мест:
-                    ${placesStr}
+                text: `Вы забронировали билеты на сеанс ${show[0].title}.
+                Список мест:
+                ${placesStr}
                 `
             })
         } catch (error) {
