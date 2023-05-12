@@ -52,7 +52,7 @@ class BookingController {
         }
     }
 
-    getBookings = async(req, res) => {
+    getShowBooking = async(req, res) => {
         const { showId } = req.params
 
         try {
@@ -74,6 +74,52 @@ class BookingController {
 
         } catch (error) {
             handleError(res, 'Error get bookings.', error)
+        }
+    }
+
+    getAdminBookings = async (req, res) => {
+        try {
+            let [bookings] = await db.query(`
+                select b.id as booking_id,
+                u.email as user_email,
+                b.email as email,
+                b.places as places,
+                ss.show_id, 
+                ss.session_id, 
+                ss.title, 
+                ss.date, 
+                ss.time, 
+                ss.address from bookings as b 
+                    INNER JOIN (
+                        select 
+                            shs.id as session_id,
+                            s.id as show_id,
+                            s.title,
+                            shs.date,
+                            shs.time,
+                            shs.address
+                        from shows_slots as shs
+                        INNER JOIN shows as s
+                        on shs.show_id = s.id
+                    ) as ss
+                    on b.session_id = ss.session_id
+                    left join users as u on b.user_id = u.id
+            `)
+
+            bookings = bookings.map(b => {
+                return {
+                    ...b,
+                    places: JSON.parse(b.places)
+                }
+            })
+
+            return res.status(200).json({
+                message: 'Get bookings',
+                bookings
+            })
+
+        } catch (error) {
+            handleError(res, 'Error get all bookings.', error)
         }
     }
 
