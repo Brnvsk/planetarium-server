@@ -1,5 +1,7 @@
 const db = require('../config/my-sql.config')
 const { handleError } = require('../helpers/common.helper')
+const { dateFormat } = require('../config/common')
+const { format } = require('date-fns')
 
 class SessionsController {
     
@@ -28,9 +30,12 @@ class SessionsController {
     }
 
     create = async (req, res) => {
-        const { showId, date, time, address } = req.body
+        const { showId, time, address } = req.body
+        let { date } = req.body
 
         try {
+            date = format(new Date(date), dateFormat)
+
             const values = [showId, date, time, address]
 
             const [existed] = await db.query(

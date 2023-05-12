@@ -1,11 +1,14 @@
+const { format } = require('date-fns')
 const db = require('../config/my-sql.config')
 const { handleError } = require('../helpers/common.helper')
 const { sendEmail } = require('../helpers/mail.helper')
+const { dateFormat } = require('../config/common')
 
 class BookingController {
 
     save = async(req, res) => {
-        const { date, time, showId, places, address } = req.body
+        const { time, showId, places, address } = req.body
+        let { date } = req.body
         let { userId, email } = req.body
         if (!showId) {
             return handleError(res, 'No show id was provided.')
@@ -17,20 +20,31 @@ class BookingController {
 
         userId = userId ? userId : null
         email = email ? email : null
+        
+        date = format(new Date(date), dateFormat)
+        const [session] = await db.query('SELECT * from shows_slots where show_id = ? AND date = ? AND time = ? AND address = ?', [showId, date, time, address])
 
-        const value = [showId, date, time, address, email, userId, JSON.stringify(places)]
+        if (!session[0] || !session[0].id) {
+            return res.status(404).json({
+                message: 'No such session for passed session info.'
+            })
+        }
+
+        const sessionId = session[0].id
+
+        const value = [sessionId, email, userId, JSON.stringify(places)]
 
         try {
             const conn = await db;
-            const [saved] = await conn.query('INSERT INTO bookings (show_id, date, time, address, email, user_id, places) values (?)', [value], true)
+            const [saved] = await conn.query('INSERT INTO bookings (session_id, email, user_id, places) values (?)', [value], true)
 
-            if (saved.insertId) {
-                this.sendBookingEmail(conn, email, userId, showId, places)
-            }
+            // if (saved.insertId) {
+            //     this.sendBookingEmail(conn, email, userId, showId, places)
+            // }
 
             return res.status(200).json({
                 message: 'Booking saved',
-                bookingid: saved.insertId
+                bookingId: saved.insertId
             })
 
         } catch (error) {
@@ -42,8 +56,11 @@ class BookingController {
         const { showId } = req.params
 
         try {
-            const conn = await db
-            let [bookings] = await conn.query('select * from bookings where show_id = ?', [showId])
+            const [showSessions] = await db.query('SELECT * from shows_slots where show_id = ?', showId)
+            
+            const ids = showSessions.map(session => session.id)
+
+            let [bookings] = await db.query('select * from bookings as b inner join shows_slots as shs on b.session_id = shs.id where session_id IN (?)', [ids])
             bookings = bookings.map(booking => {
                 return {
                     ...booking,
@@ -56,7 +73,7 @@ class BookingController {
             })
 
         } catch (error) {
-            handleError(res, 'Error saving booking.', error)
+            handleError(res, 'Error get bookings.', error)
         }
     }
 
