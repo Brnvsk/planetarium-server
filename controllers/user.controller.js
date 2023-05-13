@@ -1,4 +1,5 @@
-const db = require('../config/my-sql.config')
+const db = require('../config/my-sql.config');
+const { handleError } = require('../helpers/common.helper');
 
 class UserController {
 
@@ -89,6 +90,42 @@ class UserController {
             })
         }
     }
+
+    update = async (req, res) => {
+        const { update } = req.body
+        const { id } = req.params
+
+        try {
+            let [[user]] = await db.query('select * from users where id = ?', [id])
+
+            if (!user) {
+                return handleError(res, 'User not found.', error, 304)
+            }
+            
+            user = {
+                ...user,
+                ...update
+            }
+
+            const { news_tags } = user
+
+            await db.query('UPDATE users set news_tags = ? where id = ?', [news_tags, id])
+
+            let [[updated]] = await db.query('select * from users where id = ?', [id])
+
+            const [tags] = await db.query('select * from news_tags')
+
+            updated = formatUserObject(updated)
+            updated.tags = formatUserTags(updated, tags)
+
+            return res.status(200).json({
+                message: 'Updated',
+                updated,
+            })
+        } catch (error) {
+            return handleError(res, 'Error update user.', error)
+        }
+    }
 }
 
 function formatUserObject(user) {
@@ -109,6 +146,9 @@ function formatUserObject(user) {
 }
 
 function formatUserTags(user, tags) {
+    if (!user.tags || user.tags.length === 0) {
+        return []
+    }
     return user.tags.split('-').map(tagId => tags.find(t => t.id === Number(tagId)))
 }
 
