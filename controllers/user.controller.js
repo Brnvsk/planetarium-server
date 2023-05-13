@@ -15,8 +15,13 @@ class UserController {
                 })
             }
 
+            const [tags] = await db.query('select * from news_tags')
+
+            let user = formatUserObject(rows[0])
+            user.tags = formatUserTags(user, tags)
+
             return res.status(200).json({
-                user: formatUserObject(rows[0]),
+                user,
                 message: 'User found.'
             })
         } catch (error) {
@@ -34,6 +39,7 @@ class UserController {
         try {
             const conn = await db
             const [rows, fields] = await conn.execute('select * from users where email = ?', [email])
+
             if (rows.length === 0) {
                 return res.status(404).json({
                     user,
@@ -41,8 +47,13 @@ class UserController {
                 })
             }
 
+            const [tags] = await db.query('select * from news_tags')
+
+            let data = formatUserObject(rows[0])
+            data.tags = formatUserTags(data, tags)
+
             return res.status(200).json({
-                user: formatUserObject(rows[0]),
+                user: data,
                 message: 'Success login'
             })
         } catch (error) {
@@ -59,13 +70,16 @@ class UserController {
         const values = [email, login, password, avatarId, newsTags]
 
         try {
-            const conn = await db;
-            const [rows] = await conn.query('INSERT INTO users (email, login, password, avatar_id, news_tags) values (?)', [values], true)
+            const [rows] = await db.query('INSERT INTO users (email, login, password, avatar_id, news_tags) values (?)', [values], true)
 
-            const [user] = await conn.execute('select * from users where email = ?', [email])
+            const [users] = await db.execute('select * from users where email = ?', [email])
+            const [tags] = await db.query('select * from news_tags')
+
+            let data = formatUserObject(users[0])
+            data.tags = formatUserTags(data, tags)
 
             return res.status(200).json({
-                data: formatUserObject(user[0]),
+                data,
                 message: 'Success registration'
             })
         } catch (error) {
@@ -85,13 +99,17 @@ function formatUserObject(user) {
             email,
             login,
             avatarId: user.avatar_id,
-            interests: user.news_tags,
+            tags: user.news_tags,
             role,
         }
     } catch (error) {
         console.log('Error formatting user');
         return null
     }
+}
+
+function formatUserTags(user, tags) {
+    return user.tags.split('-').map(tagId => tags.find(t => t.id === Number(tagId)))
 }
 
 const controller = new UserController()
