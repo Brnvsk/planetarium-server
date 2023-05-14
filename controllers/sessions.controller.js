@@ -7,7 +7,11 @@ class SessionsController {
     
     getAll = async(req, res) => {
         try {
-            const [rows, fields] = await db.execute('select date, time, address, sh.title, sh.id as show_id, shs.id as session_id from shows_slots as shs inner join shows as sh on shs.show_id = sh.id;')
+            const [rows, fields] = await db.execute(`
+                select 
+                    date, time, address, sh.title, sh.id as show_id, sh.poster_src as poster, shs.id as session_id
+                    from shows_slots as shs inner join shows as sh on shs.show_id = sh.id;
+            `)
 
             const data = rows.map(item => {
                 return {
@@ -16,7 +20,8 @@ class SessionsController {
                     time: item.time,
                     address: item.address,
                     showId: item.show_id,
-                    showTitle: item.title
+                    showTitle: item.title,
+                    showPoster: item.poster,
                 }
             })            
 
