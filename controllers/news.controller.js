@@ -4,44 +4,46 @@ const { handleError } = require('../helpers/common.helper')
 class NewsController {
 
     getAll = async (req, res) => {
+
         try {
             let [news] = await db.query('SELECT * from news')
-            const [tags] = await db.query('SELECT * from news_tags')
 
-            news = news.map(item => {
-                const tagsArr = item.tags.split('-').map(tagId => tags.find(t => t.id === Number(tagId))).filter(Boolean)
-
-                return {
-                    ...item,
-                    tags: tagsArr,
-                    text: item.text.split(/[\r\n]+/),
-                }
-            })
+            for (const item of news) {
+                item.tags = await getNewsTags(item.id)
+                item.text = item.text.split(/[\r\n]+/)
+            }
 
             return res.status(200).json({
                 message: 'Get all news',
                 data: news
             })
         } catch (error) {
-            return handleError(res, 'Get all news')
+            return handleError(res, 'Get all news', error)
         }
     }
 
     create = async (req, res) => {
         let { title, text, photo, tags } = req.body
 
-        tags = Array.isArray(tags) ? tags.join('-') : tags
-
         try {
-            const values = [title, text, photo, tags]
+            const values = [title, text, photo]
             const inserted = await db.query(
-                `INSERT into news (title, text, photo, tags) values (?)`, 
+                `INSERT into news (title, text, photo) values (?)`, 
                 [values]
             )
-            
-            let created = null
             const insertId = inserted[0].insertId
-            if (insertId) {
+            
+            let newsTags = []
+            if (tags && tags.length > 0) {
+                const tagsInserted = await insertNewsTags(insertId, tags)
+                if (!tagsInserted) {
+                    return handleError(res, 'Cannot save news tags.')
+                }
+                newsTags = tagsInserted.slice()
+            }
+
+            let created = null
+            if (insertId != null) {
                 created = (await db.query('SELECT * from news where id = ?', insertId))[0]
             }
 
@@ -52,6 +54,7 @@ class NewsController {
             const data = {
                 ...created[0],
                 text: created[0].text.split(/[\r\n]+/),
+                tags: newsTags
             }
 
             return res.status(200).json({
@@ -66,29 +69,39 @@ class NewsController {
     update = async (req, res) => {
         const { id } = req.params
         const { update } = req.body
+        const { tags } = update
 
         try {
             const [item] = await db.query('SELECT * from news where id = ?', id)
 
-            const { title, text, photo, tags } = {
+            const { title, text, photo } = {
                 ...item[0],
                 ...update,
             }
 
+            await deleteNewsTags(id)
+
             await db.query(`UPDATE news SET
                 title = ?,
                 text = ?,
-                photo = ?,
-                tags = ?
+                photo = ?
                 where id = ?
-                `, [title, text, photo, tags, id])
+                `, [title, text, photo, id])
 
             const [updated] = (await db.query('SELECT * from news where id = ?', id))[0]
+            if (!updated) {
+                return handleError(res, 'Error update news.')
+            }
 
+            let tagsUpdate = []
+            if (tags && tags.length > 0) {
+                tagsUpdate = await insertNewsTags(id, tags)
+            }
 
             const data = {
                 ...updated,
                 text: updated.text.split(/[\r\n]+/),
+                tags: tagsUpdate
             }
 
             return res.status(200).json({
@@ -130,6 +143,36 @@ class NewsController {
             })
         }
     }
+}
+
+async function insertNewsTags(newsId, tags) {
+    const newsTagsInsertData = tags.map(tagId => [Number(tagId), newsId])
+    const [newsTagsInserted] = await db.query(
+        `INSERT into news_tags_join (tag_id, news_id) values ?`, 
+        [newsTagsInsertData]
+    )
+
+    if (!newsTagsInserted) {
+        return []
+    }
+
+    return await getNewsTags(newsId)
+}
+
+async function getNewsTags(newsId) {
+    const [tagsJoins] = await db.query('SELECT tag_id from news_tags_join where news_id = ?', [newsId])
+    const tagsIds = tagsJoins.map(join => join.tag_id)
+    if (tagsIds.length === 0) {
+        return []
+    }
+    const [ tags ] = await db.query('select * from news_tags where id IN (?)', [tagsIds])
+    return tags
+}
+
+async function deleteNewsTags(newsId) {
+    const [deleted] = await db.query('delete from news_tags_join where news_id = ?', [newsId])
+
+    return deleted
 }
 
 const controller = new NewsController()
