@@ -81,7 +81,7 @@ class ShowsController {
         try {
             const [show] = await db.query('SELECT * from shows where id = ?', id)
 
-            const { title, descr, price, tags, poster_src  } = {
+            const { title, descr, price, poster_src, director, country  } = {
                 ...show[0],
                 ...update,
             }
@@ -90,10 +90,11 @@ class ShowsController {
                 title = ?,
                 descr = ?,
                 price = ?,
-                tags = ?,
-                poster_src = ?
+                poster_src = ?,
+                director = ?,
+                country = ?
                 where id = ${id}
-                `, [title, descr, price, tags, poster_src])
+                `, [title, descr, price, poster_src, director, country])
 
             const [updated] = await db.query('SELECT * from shows where id = ?', id)
 
