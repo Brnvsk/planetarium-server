@@ -9,4 +9,6 @@ router.post('/login', userController.login)
 
 router.patch('/:id', userController.update)
 
+router.get('/:id/news', userController.getUserNews)
+
 module.exports = router

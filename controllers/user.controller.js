@@ -1,5 +1,6 @@
 const db = require('../config/my-sql.config');
 const { handleError } = require('../helpers/common.helper');
+const tagsController = require('./tags.controller')
 
 class UserController {
 
@@ -9,17 +10,15 @@ class UserController {
         try {
             const [rows] = await db.query('select * from users where email = ?', [token])
 
-            if (rows.length === 0) {
+            if (!rows) {
                 return res.status(204).json({
                     user: null,
                     message: 'No user found by token provided.'
                 })
             }
+            const user = rows[0]
 
-            const [tags] = await db.query('select * from news_tags')
-
-            let user = formatUserObject(rows[0])
-            user.tags = formatUserTags(user, tags)
+            user.tags = await getUserTags(user.id)
 
             return res.status(200).json({
                 user,
@@ -38,20 +37,18 @@ class UserController {
         const { email, password } = user
 
         try {
-            const conn = await db
-            const [rows, fields] = await conn.execute('select * from users where email = ?', [email])
+            const [rows] = await db.query('select * from users where email = ?', [email])
 
             if (rows.length === 0) {
                 return res.status(404).json({
-                    user,
                     message: 'No user found with such email.'
                 })
             }
 
-            const [tags] = await db.query('select * from news_tags')
-
-            let data = formatUserObject(rows[0])
-            data.tags = formatUserTags(data, tags)
+            const data = rows[0]
+            const userTags = await getUserTags(data.id)
+            
+            data.tags = userTags
 
             return res.status(200).json({
                 user: data,
@@ -65,22 +62,27 @@ class UserController {
         }
     }
 
-    register = async(req, res, next) => {
+    register = async(req, res) => {
         const { user } = req.body
-        const { email, login, password, avatarId, newsTags } = user
-        const values = [email, login, password, avatarId, newsTags]
+        const { email, login, password, avatarId, tags } = user
+        const values = [email, login, password, avatarId]
 
         try {
-            const [rows] = await db.query('INSERT INTO users (email, login, password, avatar_id, news_tags) values (?)', [values], true)
+            const [rows] = await db.query('INSERT INTO users (email, login, password, avatar_id) values (?)', [values], true)
+            const insertId = rows.insertId
 
-            const [users] = await db.execute('select * from users where email = ?', [email])
-            const [tags] = await db.query('select * from news_tags')
+            if (!insertId) {
+                return handleError(res, 'Error inserting user')
+            }
 
-            let data = formatUserObject(users[0])
-            data.tags = formatUserTags(data, tags)
+            const [userTags] = await tagsController._insertUserTags(insertId, tags)
+
+            const [user] = await db.query('select * from users where id = ?', [insertId])
+
+            user[0].tags = userTags
 
             return res.status(200).json({
-                data,
+                data: user[0],
                 message: 'Success registration'
             })
         } catch (error) {
@@ -107,49 +109,38 @@ class UserController {
                 ...update
             }
 
-            const { news_tags } = user
+            const { tags } = user
 
-            await db.query('UPDATE users set news_tags = ? where id = ?', [news_tags, id])
-
-            let [[updated]] = await db.query('select * from users where id = ?', [id])
-
-            const [tags] = await db.query('select * from news_tags')
-
-            updated = formatUserObject(updated)
-            updated.tags = formatUserTags(updated, tags)
+            user.tags = await tagsController._updateUserTags(id, tags)
 
             return res.status(200).json({
                 message: 'Updated',
-                updated,
+                updated: user,
             })
         } catch (error) {
             return handleError(res, 'Error update user.', error)
         }
     }
-}
 
-function formatUserObject(user) {
-    const { email, login, id, role } = user
-    try {
-        return {
-            id,
-            email,
-            login,
-            avatarId: user.avatar_id,
-            tags: user.news_tags,
-            role,
+    getUserNews = async (req, res) => {
+        const { id } = req.params
+
+        try {
+            const news = await tagsController._getUserNews(id)
+
+            return res.status(200).json({
+                message: 'Get user news',
+                data: news
+            })
+            
+        } catch (error) {
+            return handleError(res, 'Error get user news.', error)
         }
-    } catch (error) {
-        console.log('Error formatting user');
-        return null
     }
 }
 
-function formatUserTags(user, tags) {
-    if (!user.tags || user.tags.length === 0) {
-        return []
-    }
-    return user.tags.split('-').map(tagId => tags.find(t => t.id === Number(tagId)))
+async function getUserTags(id) {
+    return await tagsController._getUserTags(id)
 }
 
 const controller = new UserController()

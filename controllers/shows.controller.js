@@ -44,12 +44,12 @@ class ShowsController {
     }
 
     create = async (req, res) => {
-        const { title, descr, price, posterPath } = req.body
+        const { title, descr, price, posterPath, director, country } = req.body
 
         try {
-            const values = [title, descr, price, posterPath, 'tags...']
+            const values = [title, descr, price, posterPath, director, country]
             const inserted = await db.query(
-                `INSERT into shows (title, descr, price, poster_src, tags) values (?)`, 
+                `INSERT into shows (title, descr, price, poster_src, director, country) values (?)`, 
                 [values]
             )
             
