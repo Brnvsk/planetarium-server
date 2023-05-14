@@ -61,6 +61,7 @@ class TagsController {
 			const [tags] = await db.query('select * from news_tags where id IN (?)', [newsTags.map(it => it.tag_id)])
 			result.push({
 				...newsItems[0],
+				text: newsItems[0].text.split(/[\r\n]+/),
 				tags,
 			})
 		}
