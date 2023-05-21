@@ -17,9 +17,10 @@ router.post(
     '',
     uploader.single('file'),
     async(req, res) => {
-        const result = await cloudinary.uploader.upload(req.file.path, uploadOptions);
-        // const result = req.file
-        // console.log(result);
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            // public_id: req.file.filename,
+            use_filename: true,
+        });
 
         try {
             return res.status(200).json({
