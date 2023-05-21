@@ -7,18 +7,15 @@ const uploader = multer({
     storage,
 });
 
-const uploadOptions = {
-    use_filename: true
-}
-
 const router = Router();
 
 router.post(
     '',
     uploader.single('file'),
     async(req, res) => {
+        const { path } = req.body
         const result = await cloudinary.uploader.upload(req.file.path, {
-            // public_id: req.file.filename,
+            folder: path,
             use_filename: true,
         });
 
