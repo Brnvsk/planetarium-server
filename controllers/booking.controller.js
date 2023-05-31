@@ -3,6 +3,7 @@ const db = require('../config/my-sql.config')
 const { handleError } = require('../helpers/common.helper')
 const { sendEmail } = require('../helpers/mail.helper')
 const { dateFormat } = require('../config/common')
+const qrcode = require('qrcode');
 
 class BookingController {
 
@@ -38,7 +39,16 @@ class BookingController {
             const [saved] = await db.query('INSERT INTO bookings (session_id, email, user_id, places) values (?)', [value], true)
 
             if (saved.insertId) {
-                this.sendBookingEmail(db, email, userId, showId, places, saved.insertId)
+                this.sendBookingEmail(db, {
+                    email, 
+                    userId, 
+                    showId, 
+                    places, 
+                    bookingId: saved.insertId,
+                    date,
+                    time, 
+                    address,
+                })
             }
 
             return res.status(200).json({
@@ -48,6 +58,21 @@ class BookingController {
 
         } catch (error) {
             handleError(res, 'Error saving booking.', error)
+        }
+    }
+
+    delete = async (req, res) => {
+        const { id } = req.params
+
+        try {
+            const [deleted] = await db.query('DELETE from bookings where id = ?', id)
+
+            return res.status(200).json({
+                message: 'Deleted booking',
+                deleted
+            })
+        } catch (error) {
+            handleError(res, 'Error delete booking.', error)
         }
     }
 
@@ -172,7 +197,8 @@ class BookingController {
         }
     }
 
-    sendBookingEmail = async (conn, email, userId, showId, places, bookingId) => {
+    sendBookingEmail = async (conn, options) => {
+        const { email, userId, showId, places, bookingId, date, time, address } = options
         let emailAddr = ''
         try {
             if (email) {
@@ -185,23 +211,44 @@ class BookingController {
             const [ show ] = await conn.query('SELECT * from shows where id = ?', showId)
             console.log('send email to:', emailAddr);
             const placesStr = places.map(place => {
-                return `${place.side === 'left' ? 'Слева' : 'Справа'}, ряд ${place.row}, место ${place.place}`
-            }).join('; ')
-    
+                return `<li>${place.side === 'left' ? 'Слева' : 'Справа'}, ряд ${place.row}, место ${place.place}</li>`
+            }).join('')
+
+            const qrcodeImg = await qrcode.toDataURL('https://github.com')
+
             sendEmail({
                 to: emailAddr,
                 subject: `Ваши билеты на показ "${show[0].title}" успешно забронированы`,
-                text:
-`Вы забронировали билеты на сеанс ${show[0].title}.
-Код билета #${bookingId}. Предоставьте его на входе.
-Список мест:
-${placesStr}
-`
+                html: `
+                <h2>Вы забронировали билеты на сеанс ${show[0].title}</h2>
+                <h3>Код билета #${bookingId}.</h3>
+                <p>Список мест:</p>
+                <ol>${placesStr}</ol>
+                <p>Дата и время: ${date} ${time}, адрес: ${address}.</p>
+                <p>Возможно, понадобится показать QR код на входе, поэтому сохраняйте его до начала показа.</p>
+                <img src="${qrcodeImg}" />`,
+                attachDataUrls: true,
             })
         } catch (error) {
             console.log('Error sending booking email', error);
         }
        
+    }
+
+    getBookingInfo = async (req, res) => {
+        const { id } = req.params
+
+        try {
+            const [[booking]] = await db.query(`SELECT * from 
+            bookings as b inner join shows_slots as sh on b.session_id = sh.id
+            inner join shows as s on s.id = sh.show_id
+            where b.id = ?`, id)
+
+            return res.status(200).json(booking)
+        } catch (error) {
+            handleError(res, 'Error handle booking qr check.', error)
+        }
+
     }
 }
 

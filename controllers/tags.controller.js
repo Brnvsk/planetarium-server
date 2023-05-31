@@ -51,6 +51,9 @@ class TagsController {
 	_getUserNews = async (userId) => {
 		const userTags = await this._getUserTags(userId)
 
+		if (userTags.length === 0) {
+			return []
+		}
 		const tagsIds = userTags.map(t => t.id)
 		const [newsIds] = await db.query('select news_id from news_tags_join where tag_id IN (?)', [tagsIds])
 

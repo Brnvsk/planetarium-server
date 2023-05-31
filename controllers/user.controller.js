@@ -1,6 +1,7 @@
 const db = require('../config/my-sql.config');
 const { handleError } = require('../helpers/common.helper');
 const tagsController = require('./tags.controller')
+const crypto = require('crypto')
 
 class UserController {
 
@@ -45,6 +46,14 @@ class UserController {
                 })
             }
 
+            const isValidPassword = _isValidPassword(password, rows[0].salt, rows[0].password)
+
+            if (!isValidPassword) {
+                return res.status(404).json({
+                    message: 'Wrong password.'
+                })
+            }
+
             const data = rows[0]
             const userTags = await getUserTags(data.id)
             
@@ -65,10 +74,14 @@ class UserController {
     register = async(req, res) => {
         const { user } = req.body
         const { email, login, password, avatarId, tags } = user
-        const values = [email, login, password, avatarId]
+
+        const salt = getPasswordSalt()
+        const passwordHash = hashPassword(password, salt)
+
+        const values = [email, login, passwordHash, avatarId, salt]
 
         try {
-            const [rows] = await db.query('INSERT INTO users (email, login, password, avatar_id) values (?)', [values], true)
+            const [rows] = await db.query('INSERT INTO users (email, login, password, avatar_id, salt) values (?)', [values], true)
             const insertId = rows.insertId
 
             if (!insertId) {
@@ -141,6 +154,20 @@ class UserController {
 
 async function getUserTags(id) {
     return await tagsController._getUserTags(id)
+}
+
+function getPasswordSalt() {
+    return crypto.randomBytes(16).toString('hex')
+}
+
+function hashPassword(password, salt) {
+    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex')
+    return hash
+}
+
+function _isValidPassword(password, salt, hash) {
+    const hashedPassword = hashPassword(password, salt)
+    return hash === hashedPassword
 }
 
 const controller = new UserController()
