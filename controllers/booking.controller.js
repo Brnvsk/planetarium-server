@@ -2,7 +2,7 @@ const { format } = require('date-fns')
 const db = require('../config/my-sql.config')
 const { handleError } = require('../helpers/common.helper')
 const { sendEmail } = require('../helpers/mail.helper')
-const { dateFormat } = require('../config/common')
+const { dateFormat, qrCheckerDomail } = require('../config/common')
 const qrcode = require('qrcode');
 
 class BookingController {
@@ -214,7 +214,7 @@ class BookingController {
                 return `<li>${place.side === 'left' ? 'Слева' : 'Справа'}, ряд ${place.row}, место ${place.place}</li>`
             }).join('')
 
-            const qrcodeImg = await qrcode.toDataURL('https://github.com')
+            const qrcodeImg = await qrcode.toDataURL(`${qrCheckerDomail}?q=${bookingId}`)
 
             sendEmail({
                 to: emailAddr,
