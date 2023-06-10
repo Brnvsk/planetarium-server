@@ -55,13 +55,15 @@ class TagsController {
 			return []
 		}
 		const tagsIds = userTags.map(t => t.id)
-		const [newsIds] = await db.query('select news_id from news_tags_join where tag_id IN (?)', [tagsIds])
+		let [newsIds] = await db.query('select news_id from news_tags_join where tag_id IN (?)', [tagsIds])
+		newsIds = newsIds.map(it => it.news_id)
+		newsIds = [...new Set(newsIds)]
 
 		const result = []
 		for (const it of newsIds) {
-			const [newsItems] = await db.query('select * from news where id = ?', [it.news_id])
+			const [newsItems] = await db.query('select * from news where id = ?', [it])
 			const [newsTags] = await db.query('select * from news_tags_join where news_id = ?', newsItems[0].id)
-			const [tags] = await db.query('select * from news_tags where id IN (?)', [newsTags.map(it => it.tag_id)])
+			const [tags] = await db.query('select * from news_tags where id IN (?)', newsTags.map(it => it.tag_id))
 			result.push({
 				...newsItems[0],
 				text: newsItems[0].text.split(/[\r\n]+/),
