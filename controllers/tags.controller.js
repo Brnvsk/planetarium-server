@@ -2,6 +2,66 @@ const db = require('../config/my-sql.config')
 const { handleError } = require('../helpers/common.helper')
 
 class TagsController {
+
+	create = async (req, res) => {
+		const { name } = req.body
+
+		try {
+			const values = [name]
+
+			const [created] = await db.query('INSERT into news_tags (name) values (?)', [values])
+			if (!created) {
+				handleError(res, 'create tag')
+			}
+
+			const [inserted] = await db.query('SELECT * from news_tags where id = ?', created.insertId)
+
+			return res.status(200).json({
+				origin: 'create tag',
+				created: inserted[0]
+			})
+		} catch (error) {
+			handleError(res, 'create tag', error)
+		}
+	}
+
+	update = async (req, res) => {
+		const { name } = req.body.update
+		const { id } = req.params
+
+		try {
+			const values = [name, id]
+
+			await db.query(`UPDATE news_tags SET
+				name = ?
+				where id = ?
+			`, values)
+
+			const [[updated]] = await db.query('SELECT * from news_tags where id = ?', id)
+
+			return res.status(200).json({
+				origin: 'update tag',
+				updated
+			})
+		} catch (error) {
+			handleError(res, 'update tag', error)
+		}
+	}
+
+	delete = async (req, res) => {
+		const { id } = req.params
+
+		try {
+			const deleted = await db.query(`DELETE from news_tags where id = ?`, [id])
+
+			return res.status(200).json({
+				origin: 'delete tag',
+				deleted
+			})
+		} catch (error) {
+			handleError(res, 'delete tag', error)
+		}
+	}
     
 	_insertUserTags = async (userId, tags) => {
 		if (tags.length === 0) {

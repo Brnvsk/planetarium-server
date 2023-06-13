@@ -111,9 +111,7 @@ class SessionsController {
                 time = ?,
                 address = ?
                 where id = ?
-                `, 
-                [date, time, address, id]
-            )
+            `, [date, time, address, id])
 
             const [updated] = await db.query('SELECT * from shows_slots where id = ?', id)
 
