@@ -123,7 +123,7 @@ class TagsController {
 		for (const it of newsIds) {
 			const [newsItems] = await db.query('select * from news where id = ?', [it])
 			const [newsTags] = await db.query('select * from news_tags_join where news_id = ?', newsItems[0].id)
-			const [tags] = await db.query('select * from news_tags where id IN (?)', newsTags.map(it => it.tag_id))
+			const [tags] = await db.query('select * from news_tags where id IN (?)', [newsTags.map(it => it.tag_id)])
 			result.push({
 				...newsItems[0],
 				text: newsItems[0].text.split(/[\r\n]+/),
